@@ -1,3 +1,5 @@
+// app/(dashboard)/(routes)/conversation/page.tsx
+
 "use client";
 
 import * as z from "zod";
@@ -11,11 +13,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {Empty} from "@/components/empty";
+import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { BotAvatar } from "@/components/bot-avatar";
+import { useRouter } from "next/navigation";
+import ProModal from "@/components/pro-modal"; // 👈 added
 
 // 1) Simple UI message type
 type ChatMessage = {
@@ -26,6 +30,11 @@ type ChatMessage = {
 const ConversationPage = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  //TODO: ProModal
+  const [showProModal, setShowProModal] = useState(false); 
+
+  const router = useRouter();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -34,37 +43,94 @@ const ConversationPage = () => {
   });
 
   const isLoading = form.formState.isSubmitting;
+  
+
+  // const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  //   try {
+  //     const userMessage: ChatMessage = {
+  //       role: "user",
+  //       content: values.prompt,
+  //     };
+
+  //     const response = await axios.post("/api/conversation", {
+  //       messages: [...messages, userMessage],
+  //     });
+
+  //     const assistantMessage: ChatMessage = {
+  //       role: "assistant",
+  //       content: response.data.reply,
+  //     };
+
+  //     setMessages((current) => [...current, userMessage, assistantMessage]);
+  //     form.reset();
+  //   } catch (error: any) {
+  //     console.error("CONVERSATION ERROR", error);
+
+  //     const status =
+  //       error?.response?.status ??
+  //       error?.status ??
+  //       (error?.code === "ERR_BAD_REQUEST"
+  //         ? error?.response?.status
+  //         : undefined);
+
+  //     if (status === 403) {
+  //       // 🟣 Open the upgrade modal
+  //       setShowProModal(true);
+  //     } else {
+  //       console.log("Non-403 error", error);
+  //     }
+  //   } finally {
+  //     router.refresh();
+  //   }
+  // };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      const userMessage: ChatMessage = {
-        role: "user",
-        content: values.prompt,
-      };
+  try {
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: values.prompt,
+    };
 
-      // send all messages + new user message to API
-      const response = await axios.post("/api/conversation", {
-        messages: [...messages, userMessage],
-      });
+    const response = await axios.post("/api/conversation", {
+      messages: [...messages, userMessage],
+    });
 
-      // expect server to return { reply: string }
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
-        content: response.data.reply,
-      };
+    const assistantMessage: ChatMessage = {
+      role: "assistant",
+      content: response.data.reply,
+    };
 
-      // update UI messages
-      setMessages((current) => [...current, userMessage, assistantMessage]);
-      form.reset();
-    } catch (error) {
-      console.log(error);
-      // TODO: show toast/modal
+    setMessages((current) => [...current, userMessage, assistantMessage]);
+    form.reset();
+  } 
+  //TODO: ProModal
+  catch (error: any) {
+    const status = error?.response?.status;
+
+    
+    if (status === 403) {
+      
+      setShowProModal(true);
+      // don’t log as an error, this is expected behavior
+      return;
     }
-    // ❌ DO NOT call router.refresh() here
-  };
+
+    // Only log unexpected errors
+    console.error("CONVERSATION ERROR", error);
+  } finally {
+    router.refresh();
+  }
+};
+
 
   return (
     <div>
+      {/* TODO: ProModal */}
+      <ProModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+      />
+
       <Heading
         title="Conversation"
         description="Our most advanced conversation model"
@@ -108,14 +174,14 @@ const ConversationPage = () => {
 
       <div className="space-y-4 mt-4">
         {isLoading && (
-            <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
-                <Loader />
-            </div>
+          <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
+            <Loader />
+          </div>
         )}
         {messages.length === 0 && !isLoading && (
-            <div>
-                <Empty label="No conversation started"/>
-            </div>
+          <div>
+            <Empty label="No conversation started" />
+          </div>
         )}
         <div className="flex flex-col-reverse gap-y-4">
           {messages.map((message) => (
@@ -123,15 +189,13 @@ const ConversationPage = () => {
               key={message.content}
               className={cn(
                 "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                message.role==="user"? "bg-white border border-black/19"
-                :"bg-muted"
-            )}
+                message.role === "user"
+                  ? "bg-white border border-black/19"
+                  : "bg-muted"
+              )}
             >
-                {message.role === "user"?<UserAvatar/>:<BotAvatar/>}
-                <p className="TEXT-SM">
-                    {message.content}
-                </p>
-              
+              {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+              <p className="TEXT-SM">{message.content}</p>
             </div>
           ))}
         </div>

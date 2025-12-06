@@ -13,9 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
+import { useRouter } from "next/navigation";
+import ProModal from "@/components/pro-modal";
 
 const VideoPage = () => {
   const [video, setVideo] = useState<string>();
+
+  //TODO: ProModal
+    const [showProModal, setShowProModal] = useState(false); 
+  
+    const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -35,14 +42,33 @@ const VideoPage = () => {
     console.log("API response:", response.data); 
     setVideo(response.data.video);   
     form.reset();
-  } catch (error) {
-    console.error("[VIDEO_ERROR_CLIENT]", error);
+  } //TODO: ProModal
+  catch (error: any) {
+    const status = error?.response?.status;
+
+    
+    if (status === 403) {
+      
+      setShowProModal(true);
+      // don’t log as an error, this is expected behavior
+      return;
+    }
+
+    // Only log unexpected errors
+    console.error("VIDEO GENERATION ERROR", error);
+  } finally {
+    router.refresh();
   }
 };
 
 
   return (
     <div>
+      
+      <ProModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+      />
       <Heading
         title="Video Generation"
         description="Turn your prompt into video"

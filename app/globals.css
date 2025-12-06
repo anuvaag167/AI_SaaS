@@ -7,8 +7,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: hsl(248 90% 66%);
+  --color-primary-foreground: hsl(0 0% 100%);
 
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -87,6 +87,10 @@
 }
 
 @layer base {
+  :root{
+    --primary: 248 90% 66%;
+    --primary-foreground: 0 0% 100%;
+  }
   * {
     @apply border-border outline-ring/50;
   }

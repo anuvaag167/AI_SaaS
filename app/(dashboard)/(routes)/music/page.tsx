@@ -14,9 +14,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { Loader } from "@/components/loader";
+import { useRouter } from "next/navigation";
+import ProModal from "@/components/pro-modal";
 
 const MusicPage = () => {
   const [music, setMusic] = useState<string>();
+
+  //TODO: ProModal
+    const [showProModal, setShowProModal] = useState(false); 
+  
+    const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -35,13 +42,32 @@ const MusicPage = () => {
 
       setMusic(response.data.audio as string);
       form.reset();
-    } catch (error) {
-      console.log(error);
+    } //TODO: ProModal
+  catch (error: any) {
+    const status = error?.response?.status;
+
+    
+    if (status === 403) {
+      
+      setShowProModal(true);
+      // don’t log as an error, this is expected behavior
+      return;
     }
+
+    // Only log unexpected errors
+    console.error("CONVERSATION ERROR", error);
+  } finally {
+    router.refresh();
+  }
   }; // ✅ FIXED — properly closes onSubmit function
 
   return (
     <div>
+      
+      <ProModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+      />
       <Heading
         title="Music Generation"
         description="Turn your prompt into music"

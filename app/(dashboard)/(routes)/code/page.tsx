@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
 import type OpenAI from "openai";
+import { useRouter } from "next/navigation";
+import ProModal from "@/components/pro-modal";
 
 // -------- schema --------
 const formSchema = z.object({
@@ -34,6 +36,11 @@ type ChatMessage = OpenAI.ChatCompletionMessageParam;
 
 const CodePage = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  //TODO: ProModal
+    const [showProModal, setShowProModal] = useState(false); 
+  
+    const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,13 +66,32 @@ const CodePage = () => {
 
       setMessages([...newMessages, assistantMessage]);
       form.reset();
-    } catch (error) {
-      console.error("CODE_GENERATION_ERROR", error);
+    } //TODO: ProModal
+  catch (error: any) {
+    const status = error?.response?.status;
+
+    
+    if (status === 403) {
+      
+      setShowProModal(true);
+      // don’t log as an error, this is expected behavior
+      return;
     }
+
+    // Only log unexpected errors
+    console.error("CONVERSATION ERROR", error);
+  } finally {
+    router.refresh();
+  }
   };
 
   return (
     <div>
+      
+      <ProModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+      />
       <Heading
         title="Code Generation"
         description="Generate code using descriptive text"

@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
+import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
+
 export const runtime = "nodejs"; // make sure we have Buffer, streams, etc.
 
 const replicate = new Replicate({
@@ -66,6 +68,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const freeTrial = await checkApiLimit();
+
+    if(!freeTrial){
+      return new NextResponse("Free trial has expired.", {status:403})
+    }
+
     let audioUrl: string | null = null;
 
     // Case 1: Replicate returns a direct URL string (old behaviour / REST API)
@@ -118,6 +126,7 @@ export async function POST(req: Request) {
       );
     }
 
+    await increaseApiLimit();
     // 👈 frontend expects { audio: string }
     return NextResponse.json({ audio: audioUrl });
   } catch (error: any) {
@@ -132,94 +141,5 @@ export async function POST(req: Request) {
   }
 }
 
-
-
-// // app/api/music/route.ts
-// import { auth } from "@clerk/nextjs/server";
-// import { NextResponse } from "next/server";
-// import Replicate from "replicate";
-
-// const replicateApiKey = process.env.REPLICATE_API_TOKEN;
-
-// // Create the Replicate client once
-// const replicate = replicateApiKey
-//   ? new Replicate({ auth: replicateApiKey })
-//   : null;
-
-// export async function POST(req: Request) {
-//   try {
-//     const { userId } = await auth();
-
-//     // 1) must be logged in
-//     if (!userId) {
-//       return new NextResponse("Unauthorized", { status: 401 });
-//     }
-
-//     // 2) must have Replicate key
-//     if (!replicate || !replicateApiKey) {
-//       console.error("Missing REPLICATE_API_TOKEN");
-//       return new NextResponse("Replicate key not configured", { status: 500 });
-//     }
-
-//     // 3) read prompt
-//     const body = (await req.json()) as { prompt?: string };
-//     const prompt = body.prompt?.trim();
-
-//     if (!prompt) {
-//       return new NextResponse("Prompt is required", { status: 400 });
-//     }
-
-//     // 🔥 Call Riffusion on Replicate
-//     const output = await replicate.run(
-//       "riffusion/riffusion:8cf61ea6c56afd61d8f5b9ffd14d7c216c0a93844ce2d82ac1c9ecc9c7f24e05",
-//       {
-//         input: {
-//           prompt_a: prompt,
-//           prompt_b: prompt,   // simple: same prompt both sides
-//           alpha: 0.5,
-//           num_outputs: 1,
-//           num_inference_steps: 50,
-//           guidance: 7,
-//           seed_image_id: "vibes",
-//         },
-//       }
-//     );
-
-//     // Replicate Riffusion usually returns an array of URLs
-//     let audio: string | undefined;
-
-//     if (Array.isArray(output)) {
-//       audio = output[0] as string;
-//     } else if (typeof output === "string") {
-//       audio = output;
-//     } else if (output && typeof output === "object") {
-//       audio =
-//         (output as any).audio ||
-//         (output as any).audio_url ||
-//         (output as any).url ||
-//         (output as any).result;
-//     }
-
-//     if (!audio) {
-//       console.error("Unexpected Replicate output for riffusion:", output);
-//       return NextResponse.json(
-//         { error: "No audio returned from model" },
-//         { status: 500 }
-//       );
-//     }
-
-//     // 👈 frontend expects { audio }
-//     return NextResponse.json({ audio });
-//   } catch (error: any) {
-//     console.error(
-//       "[MUSIC_ERROR_SERVER]",
-//       error?.response?.data || error?.message || error
-//     );
-//     return NextResponse.json(
-//       { error: "Internal error", detail: error?.message ?? "Unknown error" },
-//       { status: 500 }
-//     );
-//   }
-// }
 
 

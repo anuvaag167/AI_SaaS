@@ -27,9 +27,16 @@ import {
 } from "@/components/ui/select";
 import { Card, CardFooter } from "@/components/ui/card";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import ProModal from "@/components/pro-modal";
 
 const ImagePage = () => {
   const [images, setImages] = useState<string[]>([]);
+
+  //TODO: ProModal
+    const [showProModal, setShowProModal] = useState(false); 
+  
+    const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,13 +63,32 @@ const ImagePage = () => {
         amount: values.amount,
         resolution: values.resolution,
       });
-    } catch (error) {
-      console.error("IMAGE_GENERATION_ERROR", error);
+    } //TODO: ProModal
+  catch (error: any) {
+    const status = error?.response?.status;
+
+    
+    if (status === 403) {
+      
+      setShowProModal(true);
+      // don’t log as an error, this is expected behavior
+      return;
     }
+
+    // Only log unexpected errors
+    console.error("IMAGE GENERATION ERROR", error);
+  } finally {
+    router.refresh();
+  }
   };
 
   return (
     <div>
+    <ProModal
+      isOpen={showProModal}
+      onClose={() => setShowProModal(false)}
+    />
+    
       <Heading
         title="Image Generation"
         description="Turn your prompt into an image"

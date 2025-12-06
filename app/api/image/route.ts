@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { increaseApiLimit, checkApiLimit } from "@/lib/api-limit";
+
 const apiKey = process.env.OPENAI_API_KEY || "";
 
 const openai = new OpenAI({
@@ -23,6 +25,11 @@ export async function POST(req: Request) {
         { error: "OpenAI API key not configured" },
         { status: 500 }
       );
+    }
+    const freeTrial = await checkApiLimit();
+
+    if(!freeTrial){
+      return new NextResponse("Free trial has expired.", {status:403})
     }
 
     const body = (await req.json()) as {
@@ -71,7 +78,8 @@ export async function POST(req: Request) {
       url: String(img.url),
     }));
 
-    // frontend expects: [{ url: "..." }, ...]
+    await increaseApiLimit();
+    
     return NextResponse.json(images, { status: 200 });
   } catch (error: any) {
     console.error(
