@@ -15,6 +15,8 @@ import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
+import axios from "axios";
+import { useState } from "react";
 
 type ProModalProps = {
   isOpen: boolean;
@@ -22,6 +24,18 @@ type ProModalProps = {
 };
 
 const ProModal = ({ isOpen, onClose }: ProModalProps) => {
+    const [loading, setLoading] = useState(false)
+    const onSubscribe = async()=>{
+      try {
+        setLoading(true)
+        const response = axios.get("/api/stripe")
+        window.location.href = (await response).data.url
+      } catch (error) {
+        console.log(error,"STRIPE_CLIENT_ERROR")
+      }finally{
+        setLoading(false)
+      }
+    }
     const tools = [
   {
     label: "Conversation",
@@ -76,8 +90,8 @@ const ProModal = ({ isOpen, onClose }: ProModalProps) => {
                 </Badge>
             </div>
           </DialogTitle>
-          <p className="text-center pt-2 space-y-2 text-zinc-900 font-medium">
-            <div>
+          {/* <p > */}
+            <div className="text-center pt-2 space-y-2 text-zinc-900 font-medium">
                 {tools.map((tool)=>(
                 <Card 
                     key={tool.label} 
@@ -94,10 +108,11 @@ const ProModal = ({ isOpen, onClose }: ProModalProps) => {
                 </Card>
             ))}
             </div>
-          </p>
+          {/* </p> */}
         </DialogHeader>
         <DialogFooter>
             <Button 
+                onClick={onSubscribe} 
                 size = "lg" 
                 variant="premium" 
                 className="w-full"
